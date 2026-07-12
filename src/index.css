@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Space Grotesk", sans-serif;
+}
+
+/* Keyframes for board shake effect */
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  12% { transform: translate(-8px, 2px); }
+  25% { transform: translate(6px, -4px); }
+  37% { transform: translate(-6px, 1px); }
+  50% { transform: translate(5px, 3px); }
+  62% { transform: translate(-4px, -2px); }
+  75% { transform: translate(3px, 1px); }
+  87% { transform: translate(-1px, -1px); }
+}
+
+.animate-shake {
+  animation: shake 0.35s ease-in-out;
+}
+
+/* CRT monitor curve & scanning lines */
+.crt-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.crt-effect::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 10;
+  background-size: 100% 4px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Synthwave neon perspective grid */
+@keyframes grid-scroll {
+  0% { transform: rotateX(60deg) translateY(0); }
+  100% { transform: rotateX(60deg) translateY(40px); }
+}
+
+.synthwave-perspective {
+  perspective: 300px;
+  overflow: hidden;
+}
+
+.synthwave-grid {
+  background-image: 
+    linear-gradient(rgba(168, 85, 247, 0.2) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.2) 2px, transparent 2px);
+  background-size: 40px 40px;
+  background-position: center;
+  transform: rotateX(60deg);
+  transform-origin: top center;
+  animation: grid-scroll 3s linear infinite;
+}
+
+/* Cyberpunk grid with pulsing center */
+.cyberpunk-grid {
+  background-image: 
+    radial-gradient(circle at center, rgba(6, 182, 212, 0.06) 0%, transparent 70%),
+    linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+}
+
+/* Mystic Slow Aurora Nebular flow background */
+@keyframes nebula-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.nebula-gradient {
+  background: linear-gradient(135deg, #090d16, #1e112c, #071724, #190a1e, #030712);
+  background-size: 400% 400%;
+  animation: nebula-shift 22s ease infinite;
+}
+
+/* Custom glow borders */
+.glow-classic-green { filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.65)); }
+.glow-classic-red { filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.65)); }
+.glow-classic-blue { filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.65)); }
+.glow-classic-yellow { filter: drop-shadow(0 0 12px rgba(234, 179, 8, 0.65)); }
+
+/* Ripple waves for mística hex clicks */
+@keyframes ring-ripple {
+  0% { transform: scale(0.85); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.ripple-wave {
+  animation: ring-ripple 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
