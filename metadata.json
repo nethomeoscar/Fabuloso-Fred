@@ -1,6 +1,0 @@
-{
-  "name": "Fabulous Fred",
-  "description": "Un juego de memoria inspirado en Fabulous Fred y Simon con modos de juego local y en línea, múltiples tableros interactivos (clásico, circular y hexagonal) y diagnósticos personalizados.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
