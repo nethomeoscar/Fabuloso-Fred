@@ -79,6 +79,15 @@ export default function App() {
   // Timing references for response speed tracking
   const lastClickTimeRef = useRef<number | null>(null);
 
+  // Ref to queue online actions while Socket.io is establishing connection
+  const pendingActionRef = useRef<{
+    type: "create" | "join" | "quick";
+    playerName: string;
+    boardId: BoardId;
+    mode?: "sudden_death" | "lives";
+    roomCode?: string;
+  } | null>(null);
+
   // Initialize offline high score
   useEffect(() => {
     const cachedHighScore = localStorage.getItem("fabulous_fred_high_score");
@@ -101,6 +110,30 @@ export default function App() {
         console.log("Connected to server:", newSocket.id);
         setIsConnecting(false);
         setLobbyError(null);
+
+        // Process any queued matchmaking action that initiated this connection
+        if (pendingActionRef.current) {
+          const action = pendingActionRef.current;
+          pendingActionRef.current = null; // Clear queue
+
+          if (action.type === "create") {
+            newSocket.emit("create_room", {
+              playerName: action.playerName,
+              boardId: action.boardId,
+              mode: action.mode,
+            });
+          } else if (action.type === "join") {
+            newSocket.emit("join_room", {
+              playerName: action.playerName,
+              roomCode: action.roomCode,
+            });
+          } else if (action.type === "quick") {
+            newSocket.emit("join_quick_match", {
+              playerName: action.playerName,
+              boardId: action.boardId,
+            });
+          }
+        }
       });
 
       newSocket.on("connect_error", () => {
@@ -534,17 +567,29 @@ export default function App() {
 
   const handleJoinQuickMatch = (playerName: string, chosenBoard: BoardId) => {
     setGameMode("online");
-    socket?.emit("join_quick_match", { playerName, boardId: chosenBoard });
+    if (socket && socket.connected) {
+      socket.emit("join_quick_match", { playerName, boardId: chosenBoard });
+    } else {
+      pendingActionRef.current = { type: "quick", playerName, boardId: chosenBoard };
+    }
   };
 
   const handleCreatePrivateRoom = (playerName: string, chosenBoard: BoardId, mode: "sudden_death" | "lives") => {
     setGameMode("online");
-    socket?.emit("create_room", { playerName, boardId: chosenBoard, mode });
+    if (socket && socket.connected) {
+      socket.emit("create_room", { playerName, boardId: chosenBoard, mode });
+    } else {
+      pendingActionRef.current = { type: "create", playerName, boardId: chosenBoard, mode };
+    }
   };
 
   const handleJoinPrivateRoom = (playerName: string, code: string) => {
     setGameMode("online");
-    socket?.emit("join_room", { playerName, roomCode: code });
+    if (socket && socket.connected) {
+      socket.emit("join_room", { playerName, roomCode: code });
+    } else {
+      pendingActionRef.current = { type: "join", playerName, boardId: "classic", roomCode: code };
+    }
   };
 
   const handleOnlineButtonPress = (index: number) => {
