@@ -79,6 +79,9 @@ export default function App() {
   // Timing references for response speed tracking
   const lastClickTimeRef = useRef<number | null>(null);
 
+  // Timing reference to debounce double triggers (touch + mouse)
+  const lastPressTimeRef = useRef<number>(0);
+
   // Ref to queue online actions while Socket.io is establishing connection
   const pendingActionRef = useRef<{
     type: "create" | "join" | "quick";
@@ -186,11 +189,12 @@ export default function App() {
         const seq = data.sequence;
         const firstTurn = data.firstPlayerId === newSocket.id;
 
-        setIsMyTurn(firstTurn);
+        setIsMyTurn(false); // Disable interaction during sequence playback
         if (firstTurn) {
           setHudMessage("¡Tu Turno!");
           setHudSubMessage("Memoriza y repite la secuencia de luces.");
           await playMultiplayerSequence(seq);
+          setIsMyTurn(true); // Enable interaction only after sequence plays
         } else {
           setHudMessage("Turno del Rival");
           setHudSubMessage("El rival está memorizando la secuencia.");
@@ -236,7 +240,7 @@ export default function App() {
       }) => {
         setRoomState(data.room);
         const isMeNext = data.nextPlayerId === newSocket.id;
-        setIsMyTurn(isMeNext);
+        setIsMyTurn(false); // Ensure turn is disabled during sequence playback
 
         if (soundEnabled) playSuccessChime();
         await delay(500);
@@ -245,6 +249,7 @@ export default function App() {
           setHudMessage("¡Tu Turno!");
           setHudSubMessage("¡Atento! Se ha añadido un nuevo color.");
           await playMultiplayerSequence(data.sequence);
+          setIsMyTurn(true); // Enable turn only after sequence plays
         } else {
           setHudMessage("Turno del Rival");
           setHudSubMessage("El rival está memorizando la secuencia.");
@@ -411,6 +416,11 @@ export default function App() {
 
   const handleLocalButtonPress = (index: number) => {
     if (localState.isPlayingSequence || localState.gameStatus !== "playing") return;
+
+    // Debounce to prevent double touch+mouse triggers
+    const nowPress = Date.now();
+    if (nowPress - lastPressTimeRef.current < 250) return;
+    lastPressTimeRef.current = nowPress;
 
     // Track response speed
     const now = Date.now();
@@ -595,6 +605,11 @@ export default function App() {
   const handleOnlineButtonPress = (index: number) => {
     if (!isMyTurn || isPlayingSeqOnline || isFailed || roomState?.status !== "playing") return;
     
+    // Debounce to prevent double touch+mouse triggers
+    const nowPress = Date.now();
+    if (nowPress - lastPressTimeRef.current < 250) return;
+    lastPressTimeRef.current = nowPress;
+
     // Play visual feedback instantly for responsive gameplay
     flashButton(index, 0.25);
     
