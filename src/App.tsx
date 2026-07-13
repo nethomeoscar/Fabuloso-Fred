@@ -68,7 +68,7 @@ export default function App() {
   const [lobbyError, setLobbyError] = useState<string | null>(null);
   
   // Game Status HUD descriptions
-  const [hudMessage, setHudMessage] = useState<string>("¡Bienvenido a Fabulous Fred!");
+  const [hudMessage, setHudMessage] = useState<string>("¡Bienvenido a Cyber Simon!");
   const [hudSubMessage, setHudSubMessage] = useState<string>("Selecciona un modo de juego.");
   const [isMyTurn, setIsMyTurn] = useState(false);
   const [isPlayingSeqOnline, setIsPlayingSeqOnline] = useState(false);
@@ -698,11 +698,11 @@ export default function App() {
       <header className="relative z-10 flex justify-between items-center px-4 md:px-8 py-5 border-b border-violet-500/30 bg-[#050515]/80 backdrop-blur-sm">
         <div className="flex items-center gap-4 cursor-pointer select-none" onClick={exitToLobby}>
           <div className="w-10 h-10 bg-violet-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.6)]">
-            <span className="text-xl font-bold font-sans text-white">F</span>
+            <span className="text-xl font-bold font-sans text-white">CS</span>
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-black tracking-tighter uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-500 leading-none">
-              Fabulous Fred : Redux
+              Cyber Simon : Redux
             </h1>
             <p className="text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-violet-400 font-mono mt-0.5">
               Neural Sequencing Interface v2.0
