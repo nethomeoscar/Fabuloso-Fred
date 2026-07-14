@@ -98,7 +98,7 @@ export default function Lobby({
       {/* App Header */}
       <div className="text-center flex flex-col items-center gap-2">
         <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-500">
-          FABULOUS FRED
+          CYBER SIMON
         </h1>
         <p className="text-violet-300/80 text-sm md:text-base max-w-md font-medium">
           El legendario juego de secuenciación y memoria espacial. Elige tu tablero, pon a prueba tu cerebro o compite contra el mundo.
