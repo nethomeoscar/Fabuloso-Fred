@@ -714,13 +714,13 @@ export default function App() {
           {/* Header diagnostics panel */}
           <div className="flex gap-4 md:gap-8 select-none">
             <div className="text-right hidden sm:block">
-              <p className="text-[10px] uppercase text-gray-400 font-mono">Current Mode</p>
+              <p className="text-[10px] uppercase text-gray-400 font-mono">Modo actual</p>
               <p className="text-xs font-bold text-fuchsia-400 uppercase">
                 {gameMode === "local" ? "Personal / Diagnostic" : gameMode === "online" ? "Versus / Match" : "Lobby / Selection"}
               </p>
             </div>
             <div className="text-right border-l border-white/10 pl-4 md:pl-8 hidden sm:block">
-              <p className="text-[10px] uppercase text-gray-400 font-mono font-sans">Accuracy</p>
+              <p className="text-[10px] uppercase text-gray-400 font-mono font-sans">Precisión</p>
               <p className="text-xs font-bold text-cyan-400 font-mono">
                 {gameMode === "local" && localState.clicksCount > 0 
                   ? `${Math.min(100, Math.round((localState.score / localState.clicksCount) * 100))}%` 
