@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { BoardId } from "../types";
-import { User, Shield, Compass, Swords, Loader2, Play, Users, Globe, Grid, RefreshCw } from "lucide-react";
+import { User, Shield, Compass, Swords, Loader2, Play, Users, Globe, Grid, RefreshCw, ArrowLeft, ArrowRight } from "lucide-react";
 
 interface LobbyProps {
   onStartLocal: (boardId: BoardId) => void;
@@ -19,6 +19,7 @@ export default function Lobby({
   errorMessage,
   isConnecting,
 }: LobbyProps) {
+  const [step, setStep] = useState<1 | 2>(1);
   const [playerName, setPlayerName] = useState("");
   const [selectedBoard, setSelectedBoard] = useState<BoardId>("classic");
   const [activeTab, setActiveTab] = useState<"local" | "online">("local");
@@ -93,26 +94,27 @@ export default function Lobby({
     onJoinPrivateRoom(playerName, roomCode);
   };
 
+  const selectedBoardData = boards.find((b) => b.id === selectedBoard);
+
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 p-4 md:p-8 animate-fade-in text-white relative z-10">
       {/* App Header */}
       <div className="text-center flex flex-col items-center gap-2">
         <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-500">
-          CYBER SIMON
+          FABULOUS FRED
         </h1>
         <p className="text-violet-300/80 text-sm md:text-base max-w-md font-medium">
           El legendario juego de secuenciación y memoria espacial. Elige tu tablero, pon a prueba tu cerebro o compite contra el mundo.
         </p>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Board Selection Panel */}
-        <div className="lg:col-span-7 flex flex-col gap-4">
+      {step === 1 ? (
+        /* STEP 1: BOARD SELECTION */
+        <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 animate-fade-in">
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
             <h3 className="text-xs font-bold uppercase mb-4 text-violet-300 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></span>
-              <Grid size={16} className="text-violet-400" /> 1. Selecciona tu Tablero
+              <Grid size={16} className="text-violet-400" /> Paso 1: Selecciona tu Tablero
             </h3>
             
             <div className="flex flex-col gap-3">
@@ -151,13 +153,43 @@ export default function Lobby({
                 </div>
               ))}
             </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setStep(2)}
+                className="py-3 px-6 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-bold text-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-[0_0_15px_rgba(139,92,246,0.4)]"
+              >
+                <span>Siguiente: Modalidad de Juego</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Game Mode / Controls Panel */}
-        <div className="lg:col-span-5 flex flex-col gap-4">
+      ) : (
+        /* STEP 2: GAME MODALITY OPTIONS */
+        <div className="w-full max-w-md mx-auto flex flex-col gap-4 animate-fade-in">
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm flex flex-col gap-4">
-            {/* Nickname Input - only needed for online but nice for both */}
+            <h3 className="text-xs font-bold uppercase text-violet-300 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></span>
+              <Compass size={16} className="text-violet-400" /> Paso 2: Elige cómo Jugar
+            </h3>
+
+            {/* Selected Board Recap */}
+            <div className="flex items-center justify-between bg-black/40 border border-white/10 rounded-xl p-3 text-xs">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-mono text-violet-400 uppercase tracking-wider">Tablero Seleccionado</span>
+                <span className="font-bold text-white text-sm">{selectedBoardData?.name}</span>
+              </div>
+              <button
+                onClick={() => setStep(1)}
+                className="py-1.5 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-violet-300 hover:text-white font-semibold text-xs flex items-center gap-1.5 transition-all"
+              >
+                <ArrowLeft size={12} />
+                <span>Cambiar</span>
+              </button>
+            </div>
+
+            {/* Nickname Input */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-mono text-violet-300 uppercase tracking-widest flex items-center gap-1.5">
                 <User size={13} className="text-violet-400" /> Tu Apodo / Nickname
@@ -315,9 +347,20 @@ export default function Lobby({
                 </div>
               </div>
             )}
+
+            <div className="border-t border-white/10 pt-4 mt-2 flex justify-start">
+              <button
+                onClick={() => setStep(1)}
+                className="py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95"
+              >
+                <ArrowLeft size={14} />
+                <span>Volver a Tableros</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
+

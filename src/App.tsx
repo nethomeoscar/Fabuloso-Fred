@@ -68,7 +68,7 @@ export default function App() {
   const [lobbyError, setLobbyError] = useState<string | null>(null);
   
   // Game Status HUD descriptions
-  const [hudMessage, setHudMessage] = useState<string>("¡Bienvenido a Cyber Simon!");
+  const [hudMessage, setHudMessage] = useState<string>("¡Bienvenido a Fabulous Fred!");
   const [hudSubMessage, setHudSubMessage] = useState<string>("Selecciona un modo de juego.");
   const [isMyTurn, setIsMyTurn] = useState(false);
   const [isPlayingSeqOnline, setIsPlayingSeqOnline] = useState(false);
@@ -81,6 +81,9 @@ export default function App() {
 
   // Timing reference to debounce double triggers (touch + mouse)
   const lastPressTimeRef = useRef<number>(0);
+
+  // Active sequence session tracker to prevent concurrent async sequence overlaps
+  const currentSequenceIdRef = useRef<number>(0);
 
   // Ref to queue online actions while Socket.io is establishing connection
   const pendingActionRef = useRef<{
@@ -331,19 +334,26 @@ export default function App() {
       playBoardTone(boardId, index, durationSec);
     }
     setTimeout(() => {
-      setActiveButtonIndex(null);
+      setActiveButtonIndex((prev) => (prev === index ? null : prev));
     }, durationSec * 1000);
   }
 
   // --- MULTIPLAYER SEQUENCE PLAYBACK ---
   async function playMultiplayerSequence(seq: number[]) {
+    currentSequenceIdRef.current += 1;
+    const mySeqId = currentSequenceIdRef.current;
+
     setIsPlayingSeqOnline(true);
     await delay(800);
     for (let i = 0; i < seq.length; i++) {
+      if (mySeqId !== currentSequenceIdRef.current) return;
+
       const idx = seq[i];
       flashButton(idx, 0.4);
       await delay(550); // wait flash duration + space
     }
+    
+    if (mySeqId !== currentSequenceIdRef.current) return;
     setIsPlayingSeqOnline(false);
   }
 
@@ -383,6 +393,9 @@ export default function App() {
   };
 
   const playLocalSequence = async (seq: number[], activeBoard: BoardId) => {
+    currentSequenceIdRef.current += 1;
+    const mySeqId = currentSequenceIdRef.current;
+
     setLocalState((prev) => ({ ...prev, isPlayingSequence: true }));
     await delay(600);
 
@@ -394,15 +407,21 @@ export default function App() {
     else if (seq.length > 4) pace = 440;
 
     for (let i = 0; i < seq.length; i++) {
+      if (mySeqId !== currentSequenceIdRef.current) return;
+
       const idx = seq[i];
       setActiveButtonIndex(idx);
       if (soundEnabled) {
         playBoardTone(activeBoard, idx, pace / 1000);
       }
       await delay(pace);
-      setActiveButtonIndex(null);
+      
+      if (mySeqId !== currentSequenceIdRef.current) return;
+      setActiveButtonIndex((prev) => (prev === idx ? null : prev));
       await delay(150);
     }
+
+    if (mySeqId !== currentSequenceIdRef.current) return;
 
     setLocalState((prev) => ({ 
       ...prev, 
@@ -439,117 +458,108 @@ export default function App() {
     const nextIndex = localState.currentIndex + 1;
     const isSequenceComplete = nextIndex >= localState.sequence.length;
 
-    setLocalState((prev) => {
-      const updatedClicks = prev.clicksCount + 1;
-      const updatedDuration = prev.totalClickDurationMs + clickDelta;
+    const updatedClicks = localState.clicksCount + 1;
+    const updatedDuration = localState.totalClickDurationMs + clickDelta;
 
-      if (isCorrect) {
-        if (isSequenceComplete) {
-          // Success! Prepare next round
-          const nextScore = prev.score + 1;
-          const count = prev.boardId === "classic" ? 4 : prev.boardId === "hex" ? 7 : 8;
-          const nextSeq = [...prev.sequence, Math.floor(Math.random() * count)];
+    if (isCorrect) {
+      if (isSequenceComplete) {
+        // Success! Prepare next round
+        const nextScore = localState.score + 1;
+        const count = localState.boardId === "classic" ? 4 : localState.boardId === "hex" ? 7 : 8;
+        const nextSeq = [...localState.sequence, Math.floor(Math.random() * count)];
 
-          // Trigger round transition
-          setTimeout(() => {
-            if (soundEnabled) playSuccessChime();
-            setHudMessage(`¡Excelente!`);
-            setHudSubMessage(`Completada ronda ${nextScore}.`);
-            
-            setLocalState((inner) => ({
-              ...inner,
-              score: nextScore,
-              sequence: nextSeq,
-              currentIndex: 0,
-            }));
-
-            // Play next sequence
-            playLocalSequence(nextSeq, prev.boardId);
-          }, 600);
-
-          return {
-            ...prev,
-            clicksCount: updatedClicks,
-            totalClickDurationMs: updatedDuration,
-            currentIndex: 0,
-            isPlayingSequence: true, // Lock input during transition
-          };
-        } else {
-          // Progress in current sequence
-          return {
-            ...prev,
-            clicksCount: updatedClicks,
-            totalClickDurationMs: updatedDuration,
-            currentIndex: nextIndex,
-          };
-        }
-      } else {
-        // Bad button pressed! GAME OVER
-        if (soundEnabled) playErrorBuzz();
-        setIsFailed(true);
-        setIsShaking(true);
-        
-        // Reset shake
-        setTimeout(() => setIsShaking(false), 350);
-
-        const finalScore = prev.score;
-        const finalClicks = updatedClicks;
-        const finalDuration = updatedDuration;
-
-        // Calculate average response speed
-        const avgSpeed = finalClicks > 0 ? (finalDuration / finalClicks) / 1000 : 0;
-
-        // Dynamic multiplier for boards
-        // Tablero 4 Colores: 1x
-        // Tablero 6/7 Colores: 1.5x
-        // Tablero 8 Colores: 2x
-        const multiplier = prev.boardId === "classic" ? 1.0 : prev.boardId === "hex" ? 1.5 : 2.0;
-
-        // Manage High Score
-        let currentHighScore = prev.highScore;
-        let isNewRecord = false;
-        
-        if (finalScore > currentHighScore) {
-          currentHighScore = finalScore;
-          isNewRecord = true;
-          localStorage.setItem("fabulous_fred_high_score", finalScore.toString());
-          localStorage.setItem("fabulous_fred_best_speed", avgSpeed.toString());
-        } else if (finalScore === currentHighScore && finalScore > 0) {
-          // If they tie, check if this speed is faster to break the tie
-          const cachedBestSpeed = localStorage.getItem("fabulous_fred_best_speed");
-          const bestSpeedVal = cachedBestSpeed ? parseFloat(cachedBestSpeed) : 999;
-          if (avgSpeed < bestSpeedVal) {
-            isNewRecord = true;
-            localStorage.setItem("fabulous_fred_best_speed", avgSpeed.toString());
-          }
-        }
-
-        // Show Diagnostic Card after 1.1s delay
-        setTimeout(() => {
-          setLocalState((inner) => ({
-            ...inner,
-            gameStatus: "gameover",
-            highScore: currentHighScore,
-            diagnostic: {
-              rank: getMemoryRank(finalScore * multiplier),
-              feedback: getMemoryFeedback(finalScore * multiplier),
-              percentage: finalClicks > 0 ? Math.min(100, Math.round((finalScore / finalClicks) * 100)) : 100,
-              speed: `${avgSpeed.toFixed(2)}s por botón`,
-            },
-          }));
-        }, 1100);
-
-        setHudMessage("¡GAME OVER!");
-        setHudSubMessage("Presionaste el botón equivocado.");
-
-        return {
+        // Update state to lock input and increment score/sequence
+        setLocalState((prev) => ({
           ...prev,
           clicksCount: updatedClicks,
           totalClickDurationMs: updatedDuration,
-          gameStatus: "idle",
-        };
+          currentIndex: 0,
+          score: nextScore,
+          sequence: nextSeq,
+          isPlayingSequence: true, // Lock input during transition
+        }));
+
+        // Trigger round transition (OUTSIDE of state setter!)
+        setTimeout(() => {
+          if (soundEnabled) playSuccessChime();
+          setHudMessage(`¡Excelente!`);
+          setHudSubMessage(`Completada ronda ${nextScore}.`);
+          
+          // Play next sequence
+          playLocalSequence(nextSeq, localState.boardId);
+        }, 600);
+
+      } else {
+        // Progress in current sequence
+        setLocalState((prev) => ({
+          ...prev,
+          clicksCount: updatedClicks,
+          totalClickDurationMs: updatedDuration,
+          currentIndex: nextIndex,
+        }));
       }
-    });
+    } else {
+      // Bad button pressed! GAME OVER
+      if (soundEnabled) playErrorBuzz();
+      setIsFailed(true);
+      setIsShaking(true);
+      
+      // Reset shake
+      setTimeout(() => setIsShaking(false), 350);
+
+      const finalScore = localState.score;
+      const finalClicks = updatedClicks;
+      const finalDuration = updatedDuration;
+
+      // Calculate average response speed
+      const avgSpeed = finalClicks > 0 ? (finalDuration / finalClicks) / 1000 : 0;
+
+      // Dynamic multiplier for boards
+      const multiplier = localState.boardId === "classic" ? 1.0 : localState.boardId === "hex" ? 1.5 : 2.0;
+
+      // Manage High Score
+      let currentHighScore = localState.highScore;
+      let isNewRecord = false;
+      
+      if (finalScore > currentHighScore) {
+        currentHighScore = finalScore;
+        isNewRecord = true;
+        localStorage.setItem("fabulous_fred_high_score", finalScore.toString());
+        localStorage.setItem("fabulous_fred_best_speed", avgSpeed.toString());
+      } else if (finalScore === currentHighScore && finalScore > 0) {
+        const cachedBestSpeed = localStorage.getItem("fabulous_fred_best_speed");
+        const bestSpeedVal = cachedBestSpeed ? parseFloat(cachedBestSpeed) : 999;
+        if (avgSpeed < bestSpeedVal) {
+          isNewRecord = true;
+          localStorage.setItem("fabulous_fred_best_speed", avgSpeed.toString());
+        }
+      }
+
+      setHudMessage("¡GAME OVER!");
+      setHudSubMessage("Presionaste el botón equivocado.");
+
+      setLocalState((prev) => ({
+        ...prev,
+        clicksCount: updatedClicks,
+        totalClickDurationMs: updatedDuration,
+        gameStatus: "idle", // set to idle immediately during gameover animations
+      }));
+
+      // Show Diagnostic Card after 1.1s delay
+      setTimeout(() => {
+        setLocalState((prev) => ({
+          ...prev,
+          gameStatus: "gameover",
+          highScore: currentHighScore,
+          diagnostic: {
+            rank: getMemoryRank(finalScore * multiplier),
+            feedback: getMemoryFeedback(finalScore * multiplier),
+            percentage: finalClicks > 0 ? Math.min(100, Math.round((finalScore / finalClicks) * 100)) : 100,
+            speed: `${avgSpeed.toFixed(2)}s por botón`,
+          },
+        }));
+      }, 1100);
+    }
   };
 
   // Diagnostic helper text generators
@@ -698,11 +708,11 @@ export default function App() {
       <header className="relative z-10 flex justify-between items-center px-4 md:px-8 py-5 border-b border-violet-500/30 bg-[#050515]/80 backdrop-blur-sm">
         <div className="flex items-center gap-4 cursor-pointer select-none" onClick={exitToLobby}>
           <div className="w-10 h-10 bg-violet-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.6)]">
-            <span className="text-xl font-bold font-sans text-white">CS</span>
+            <span className="text-xl font-bold font-sans text-white">F</span>
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-black tracking-tighter uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-500 leading-none">
-              Cyber Simon : Redux
+              Fabulous Fred : Redux
             </h1>
             <p className="text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-violet-400 font-mono mt-0.5">
               Neural Sequencing Interface v2.0
@@ -714,13 +724,13 @@ export default function App() {
           {/* Header diagnostics panel */}
           <div className="flex gap-4 md:gap-8 select-none">
             <div className="text-right hidden sm:block">
-              <p className="text-[10px] uppercase text-gray-400 font-mono">Modo actual</p>
+              <p className="text-[10px] uppercase text-gray-400 font-mono">Current Mode</p>
               <p className="text-xs font-bold text-fuchsia-400 uppercase">
                 {gameMode === "local" ? "Personal / Diagnostic" : gameMode === "online" ? "Versus / Match" : "Lobby / Selection"}
               </p>
             </div>
             <div className="text-right border-l border-white/10 pl-4 md:pl-8 hidden sm:block">
-              <p className="text-[10px] uppercase text-gray-400 font-mono font-sans">Precisión</p>
+              <p className="text-[10px] uppercase text-gray-400 font-mono font-sans">Accuracy</p>
               <p className="text-xs font-bold text-cyan-400 font-mono">
                 {gameMode === "local" && localState.clicksCount > 0 
                   ? `${Math.min(100, Math.round((localState.score / localState.clicksCount) * 100))}%` 
